@@ -1,0 +1,17 @@
+service: ccnetizen
+
+provider:
+  name: aws
+  runtime: provided.al2
+  region: eu-north-1
+
+functions:
+  discordBot:
+    handler: bootstrap
+    events:
+      - http:
+          path: webhook
+          method: post
+
+plugins:
+  - serverless-rust
