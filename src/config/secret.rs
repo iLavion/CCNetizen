@@ -25,7 +25,7 @@ pub struct Config {
 impl Config {
     pub fn from_file(path: &str) -> Result<Self, Box<dyn Error>> {
         let config_str = fs::read_to_string(path)?;
-        let mut config: Config = toml::from_str(&config_str)?;
+        let config: Config = toml::from_str(&config_str)?;
         if config.discord_token.is_empty() {
             return Err("Missing discord_token in config file".into());
         }
