@@ -108,7 +108,7 @@ async fn process_town_data(name: &str, desc: &str, db_client: &Client, print_inf
     let culture = extract_value(desc, "Culture");
     let residents = extract_residents(desc);
     let mayor = extract_value(desc, "Mayor");
-    let peaceful = extract_value(desc, "Peaceful?").to_lowercase() == "true";
+    let peaceful = extract_peaceful(desc);
     let board = extract_value(desc, "Board");
     let founded = extract_value(desc, "Founded");
     let resources = extract_resources(desc);
@@ -172,15 +172,10 @@ pub async fn save_town_data(db_client: &Client, town: Town) -> Result<(), Box<dy
         .duration_since(UNIX_EPOCH)?
         .as_secs() as i64;
 
-    // First save old data with timestamp - 60 seconds
-    let mut old_town = town.clone();
-    old_town.last_updated = now - 60;
-    repository.save_town(&old_town).await?;
-
-    // Then save new data with current timestamp
-    let mut new_town = town;
-    new_town.last_updated = now;
-    repository.save_town(&new_town).await?;
+    // Update the town data with the current timestamp
+    let mut updated_town = town;
+    updated_town.last_updated = now;
+    repository.save_town(&updated_town).await?;
 
     Ok(())
 }
@@ -326,5 +321,23 @@ fn extract_nation(desc: &str) -> String {
         caps.get(1).map_or("".to_string(), |m| m.as_str().trim().to_string())
     } else {
         "".to_string()
+    }
+}
+
+/// Extracts the peaceful status from the description string.
+/// 
+/// # Arguments
+/// 
+/// * `desc` - A string slice that holds the description.
+/// 
+/// # Returns
+/// 
+/// A boolean indicating whether the town is peaceful.
+fn extract_peaceful(desc: &str) -> bool {
+    let re = Regex::new(r#"<span style="font-weight:bold">.*?Peaceful\?\s*</span>\s*(true|false)"#).unwrap();
+    if let Some(caps) = re.captures(desc) {
+        caps.get(1).map_or(false, |m| m.as_str().trim().to_lowercase() == "true")
+    } else {
+        false
     }
 }

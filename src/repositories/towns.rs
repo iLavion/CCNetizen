@@ -17,6 +17,7 @@ impl<'a> TownRepository<'a> {
             .put_item()
             .table_name("towns")
             .set_item(Some(item))
+            .condition_expression("attribute_not_exists(id)")
             .send()
             .await?;
         Ok(())
