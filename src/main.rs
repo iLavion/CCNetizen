@@ -30,9 +30,14 @@ pub struct Data {
 
 async fn on_error(error: poise::FrameworkError<'_, Data, Error>) {
     match error {
-        poise::FrameworkError::Setup { error, .. } => panic!("Failed to start bot: {:?}", error),
+        poise::FrameworkError::Setup { error, .. } => {
+            panic!("Failed to start bot: {:?}", error)
+        }
         poise::FrameworkError::Command { error, ctx, .. } => {
             println!("Error in command `{}`: {:?}", ctx.command().name, error);
+        }
+        poise::FrameworkError::CommandCheckFailed { error, ctx, .. } => {
+            println!("Command check failed for command `{}`: {:?}", ctx.command().name, error);
         }
         error => {
             if let Err(e) = poise::builtins::on_error(error).await {
@@ -52,7 +57,9 @@ async fn main() {
     // Load the configuration file
     let config = Config::from_file("config.toml").expect("Failed to load config");
 
-    // Set up the framework with the commands and options
+    // Determine if we're in development mode
+    let is_development = std::env::var("APP_ENV").unwrap_or_default() == "development";
+
     let options = poise::FrameworkOptions {
         commands: commands::get_commands(),
         prefix_options: poise::PrefixFrameworkOptions {
@@ -89,12 +96,28 @@ async fn main() {
         ..Default::default()
     };
 
-    // Create the framework
+    // Create the framework with a conditional command registration approach
     let framework = poise::Framework::builder()
-        .setup(move |ctx, _ready, framework| {
+        .setup(move |ctx, ready, framework| {
             Box::pin(async move {
-                println!("Logged in as {}", _ready.user.name);
-                poise::builtins::register_globally(ctx, &framework.options().commands).await?;
+                println!("Logged in as {}", ready.user.name);
+                if is_development {
+                    // For development, register commands in a specific guild.
+                    // Ensure your config provides a test_guild_id (as u64).
+                    let guild_id = serenity::GuildId::new(config.test_guild_id);
+                    match poise::builtins::register_in_guild(ctx, &framework.options().commands, guild_id).await {
+                        Ok(_) => println!("Commands registered successfully in guild {:?}", guild_id),
+                        Err(e) => println!("Failed to register commands in guild: {:?}", e),
+                    }
+                } else {
+                    // For production, register commands globally (may take up to an hour to update)
+                    match poise::builtins::register_globally(ctx, &framework.options().commands).await {
+                        Ok(_) => println!("Commands registered successfully globally"),
+                        Err(e) => println!("Failed to register commands: {:?}", e),
+                    }
+                }
+                
+                // Create the DynamoDB client and start the data fetcher.
                 let db_client = create_dynamodb_client().await;
                 let db_client_clone = db_client.clone();
                 tokio::spawn(async move {

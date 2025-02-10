@@ -10,6 +10,7 @@ use toml;
 pub struct Config {
     // Discord 
     pub discord_token: String,
+    pub test_guild_id: u64,
     // AWS Production
     pub aws_endpoint: String,
     pub aws_region: String,
