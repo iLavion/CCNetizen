@@ -1,7 +1,9 @@
 use aws_sdk_dynamodb::types::AttributeValue;
 use std::collections::HashMap;
+use aws_sdk_dynamodb::Error;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Town {
     pub town_name: String,
     pub nation: Option<String>,
@@ -54,5 +56,41 @@ impl Town {
         item.insert("area".to_string(), AttributeValue::N(self.area.to_string()));
         item.insert("coords".to_string(), AttributeValue::S(format!("{},{}", self.coords.0, self.coords.1)));
         item
+    }
+
+    pub fn from_dynamodb_item(item: &HashMap<String, AttributeValue>) -> Result<Self, Error> {
+        let coords_str = item.get("coords").unwrap().as_s().unwrap();
+        let coords: Vec<&str> = coords_str.split(',').collect();
+        
+        Ok(Town {
+            town_name: item.get("town_name").unwrap().as_s().unwrap().to_string(),
+            nation: item.get("nation").and_then(|v| if v.is_null() {
+                None
+            } else {
+                Some(v.as_s().unwrap().to_string())
+            }),
+            mayor: item.get("mayor").unwrap().as_s().unwrap().to_string(),
+            peaceful: *item.get("peaceful").unwrap().as_bool().unwrap(),
+            culture: item.get("culture").unwrap().as_s().unwrap().to_string(),
+            board: item.get("board").unwrap().as_s().unwrap().to_string(),
+            bank: item.get("bank").unwrap().as_n().unwrap().parse().unwrap(),
+            upkeep: item.get("upkeep").unwrap().as_n().unwrap().parse().unwrap(),
+            founded: item.get("founded").unwrap().as_n().unwrap().parse().unwrap(),
+            resources: item.get("resources").map_or(Vec::new(), |v| {
+                v.as_ss().unwrap_or(&Vec::new()).iter().map(|s| s.to_string()).collect()
+            }),
+            residents: item.get("residents").map_or(Vec::new(), |v| {
+                v.as_ss().unwrap_or(&Vec::new()).iter().map(|s| s.to_string()).collect()
+            }),
+            trusted_players: item.get("trusted_players").map_or(Vec::new(), |v| {
+                v.as_ss().unwrap_or(&Vec::new()).iter().map(|s| s.to_string()).collect()
+            }),
+            area: item.get("area").unwrap().as_n().unwrap().parse().unwrap(),
+            coords: (
+                coords[0].parse().unwrap(),
+                coords[1].parse().unwrap()
+            ),
+            last_updated: item.get("timestamp").unwrap().as_n().unwrap().parse().unwrap(),
+        })
     }
 }
