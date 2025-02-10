@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Town {
     pub town_name: String,
+    pub town_name_lower: String,
     pub nation: Option<String>,
     pub mayor: String,
     pub peaceful: bool,
@@ -26,6 +27,7 @@ impl Town {
     pub fn to_dynamodb_item(&self) -> HashMap<String, AttributeValue> {
         let mut item = HashMap::new();
         item.insert("town_name".to_string(), AttributeValue::S(self.town_name.clone()));
+        item.insert("town_name_lower".to_string(), AttributeValue::S(self.town_name_lower.clone()));
         item.insert("timestamp".to_string(), AttributeValue::N(self.last_updated.to_string()));
         item.insert("nation".to_string(), match &self.nation {
             Some(n) => AttributeValue::S(n.clone()),
@@ -64,6 +66,7 @@ impl Town {
         
         Ok(Town {
             town_name: item.get("town_name").unwrap().as_s().unwrap().to_string(),
+            town_name_lower: item.get("town_name_lower").unwrap().as_s().unwrap().to_string(),
             nation: item.get("nation").and_then(|v| if v.is_null() {
                 None
             } else {

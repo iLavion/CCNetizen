@@ -127,6 +127,7 @@ async fn process_town_data(name: &str, desc: &str, db_client: &Client, print_inf
     }
 
     let town = Town {
+        town_name_lower: name.to_lowercase(),
         town_name: name.to_string(),
         nation: Some(nation),
         mayor,

@@ -15,6 +15,7 @@ impl<'a> TownService<'a> {
     }
 
     pub async fn get_town_info(&self, town_name: &str) -> Result<Option<Town>, Error> {
-        self.repository.get_town(town_name).await
+        let town_name_lower = town_name.to_lowercase();
+        self.repository.get_town(&town_name_lower).await
     }
 }

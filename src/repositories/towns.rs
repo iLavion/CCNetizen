@@ -26,11 +26,13 @@ impl<'a> TownRepository<'a> {
     }
 
     pub async fn get_town(&self, town_name: &str) -> Result<Option<Town>, Error> {
+        let town_name_lower = town_name.to_lowercase();
         let result = self.db_client
             .query()
-            .table_name("towns")
-            .key_condition_expression("town_name = :town_name")
-            .expression_attribute_values(":town_name", AttributeValue::S(town_name.to_string()))
+            .table_name("towns") // Use the correct table name
+            .index_name("town_name_lower-index") // Use the secondary index
+            .key_condition_expression("town_name_lower = :town_name_lower")
+            .expression_attribute_values(":town_name_lower", AttributeValue::S(town_name_lower))
             .limit(1)
             .scan_index_forward(false)
             .send()
